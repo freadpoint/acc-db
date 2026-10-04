@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ctrl Panel</title>
+<style>
+:root {
+  --bg:      #0d1117;
+  --s1:      #161b22;
+  --s2:      #21262d;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --accent:  #2f81f7;
+  --accent2: #1f6feb;
+  --green:   #3fb950;
+  --red:     #f85149;
+  --sent:    #1f6feb;
+  --recv:    #21262d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+
+/* Layout */
+.app{display:flex;height:100vh}
+.acc-bar{width:64px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;overflow-y:auto;flex-shrink:0}
+.sidebar{width:300px;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* Account icons */
+.acc-icon{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700;font-size:15px;color:#fff;transition:.15s;position:relative;border:2px solid transparent;flex-shrink:0}
+.acc-icon:hover{transform:scale(1.06)}
+.acc-icon.active{border-color:var(--accent)}
+.acc-icon .dot{position:absolute;bottom:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}
+.acc-add{width:42px;height:42px;border-radius:13px;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:22px;transition:.15s;flex-shrink:0}
+.acc-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Sidebar */
+.sb-head{padding:14px 12px 10px;border-bottom:1px solid var(--border)}
+.sb-head .label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px}
+.search{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;outline:none;transition:.15s}
+.search:focus{border-color:var(--accent)}
+.search::placeholder{color:var(--muted)}
+.chats{flex:1;overflow-y:auto}
+
+/* Chat items */
+.chat-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:.1s;border-bottom:1px solid #1c2128}
+.chat-item:hover{background:var(--s2)}
+.chat-item.active{background:var(--s2)}
+.c-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;flex-shrink:0}
+.c-info{flex:1;min-width:0}
+.c-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-prev{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.c-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.c-time{font-size:11px;color:var(--muted)}
+.c-badge{background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;font-weight:700;min-width:18px;text-align:center}
+
+/* Chat header */
+.chat-head{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--s1);flex-shrink:0}
+.ch-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+.ch-info h3{font-size:15px;font-weight:600}
+.ch-info p{font-size:12px;color:var(--muted)}
+
+/* Messages */
+.msgs{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:2px}
+.date-sep{text-align:center;margin:10px 0}
+.date-sep span{background:var(--s2);color:var(--muted);font-size:12px;padding:3px 12px;border-radius:12px}
+.msg{display:flex;flex-direction:column;max-width:68%;margin:1px 0}
+.msg.out{align-self:flex-end;align-items:flex-end}
+.msg.in{align-self:flex-start}
+.msg-sender{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:3px;padding-left:2px}
+.bubble{padding:8px 13px;border-radius:16px;font-size:14px;line-height:1.5;word-break:break-word;white-space:pre-wrap}
+.msg.out .bubble{background:var(--sent);color:#fff;border-bottom-right-radius:4px}
+.msg.in .bubble{background:var(--recv);color:var(--text);border-bottom-left-radius:4px}
+.msg-time{font-size:11px;color:var(--muted);margin-top:3px;padding:0 2px}
+.msg.out .msg-time{text-align:right}
+.media-hint{color:var(--muted);font-style:italic}
+
+/* Input */
+.input-wrap{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end;background:var(--s1);flex-shrink:0}
+.msg-inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;resize:none;max-height:120px;font-family:inherit;line-height:1.45;transition:.15s}
+.msg-inp:focus{border-color:var(--accent)}
+.msg-inp::placeholder{color:var(--muted)}
+.send-btn{width:40px;height:40px;border-radius:10px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+.send-btn:hover{background:var(--accent2)}
+.send-btn svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Empty / no-chat */
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted)}
+.center svg{opacity:.25}
+.center p{font-size:15px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:26px;width:360px}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:18px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;transition:.15s}
+.field input:focus{border-color:var(--accent)}
+.actions{display:flex;gap:10px;margin-top:18px}
+.btn{padding:9px 18px;border-radius:8px;border:none;font-size:14px;cursor:pointer;font-weight:500;transition:.15s;flex:1}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:var(--accent2)}
+.btn-s{background:var(--s2);color:var(--text);border:1px solid var(--border);flex:0 0 auto;padding:9px 14px}
+.btn-s:hover{background:var(--border)}
+
+/* Setup */
+.setup{flex:1;display:flex;align-items:center;justify-content:center}
+.setup-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:36px;width:400px}
+.setup-card h1{font-size:22px;font-weight:800;margin-bottom:6px;letter-spacing:-.3px}
+.setup-card p{color:var(--muted);margin-bottom:22px;line-height:1.5}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:14px;z-index:200;animation:fadein .25s;max-width:300px}
+.toast.err{border-color:var(--red);color:var(--red)}
+.toast.ok{border-color:var(--green);color:var(--green)}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Spinner */
+.spin{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:s .6s linear infinite;margin:auto}
+@keyframes s{to{transform:rotate(360deg)}}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- Setup -->
+<div id="setup" class="app" style="display:none">
+  <div class="setup">
+    <div class="setup-card">
+      <h1>⌨️ Ctrl Panel</h1>
+      <p>Введи адрес бэкенда. По умолчанию он запускается на localhost:5000.</p>
+      <div class="field">
+        <label>Backend URL</label>
+        <input id="be-url" value="http://localhost:5000" placeholder="http://localhost:5000">
+      </div>
+      <button class="btn btn-p" onclick="saveBackend()" style="width:100%;margin-top:4px">Подключиться</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="app" style="display:none">
+  <div class="acc-bar" id="acc-bar">
+    <div class="acc-add" title="Добавить аккаунт" onclick="openAuth()">+</div>
+  </div>
+  <div class="sidebar">
+    <div class="sb-head">
+      <div class="label">Чаты</div>
+      <input class="search" id="search" placeholder="Поиск..." oninput="filterChats(this.value)">
+    </div>
+    <div class="chats" id="chats">
+      <div class="center" style="padding:40px 0"><p>Выбери аккаунт</p></div>
+    </div>
+  </div>
+  <div class="main" id="main">
+    <div class="center">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <p>Выбери чат</p>
+    </div>
+  </div>
+</div>
+
+<!-- Auth modal -->
+<div id="auth-modal" class="overlay" style="display:none" onclick="overlayClick(event,'auth-modal')">
+  <div class="modal">
+    <h3 id="auth-title">Добавить аккаунт</h3>
+    <div id="s1">
+      <div class="field"><label>Телефон</label><input id="a-phone" placeholder="+994501234567"></div>
+      <div class="field"><label>API ID</label><input id="a-id" placeholder="12345678"></div>
+      <div class="field"><label>API Hash</label><input id="a-hash" placeholder="abc123..."></div>
+      <div class="actions">
+        <button class="btn-s btn" onclick="hide('auth-modal')">Отмена</button>
+        <button class="btn btn-p" onclick="authStart()">Отправить код</button>
+      </div>
+    </div>
+    <div id="s2" style="display:none">
+      <div class="field"><label>Код из Telegram</label><input id="a-code" placeholder="12345" maxlength="5"></div>
+      <div class="actions">
+        <button class="btn-s btn" onclick="hide('auth-modal')">Отмена</button>
+        <button class="btn btn-p" onclick="authVerify()">Войти</button>
+      </div>
+    </div>
+    <div id="s3" style="display:none">
+      <div class="field"><label>Пароль (двухфакторка)</label><input id="a-pw" type="password" placeholder="••••••••"></div>
+      <div class="actions">
+        <button class="btn-s btn" onclick="hide('auth-modal')">Отмена</button>
+        <button class="btn btn-p" onclick="auth2fa()">Подтвердить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let API = '', curAcc = null, curChat = null, lastId = 0, pollTmr = null, allDialogs = [];
+const COLORS = ['#2f81f7','#3fb950','#d2a8ff','#ffa657','#e3b341','#58a6ff','#79c0ff','#56d364'];
+const color   = s  => COLORS[Math.abs([...s].reduce((a,c)=>a+c.charCodeAt(0),0))%COLORS.length];
+const initials = n => (n||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+const esc      = s  => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtTime  = d  => new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const fmtDate  = d  => { const dt=new Date(d),now=new Date(); return dt.toDateString()===now.toDateString()?fmtTime(d):dt.toLocaleDateString([],{month:'short',day:'numeric'}); };
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  API = localStorage.getItem('cp_api') || '';
+  if (!API) { show('setup'); return; }
+  show('app');
+  loadAccounts();
+};
+
+function saveBackend() {
+  API = (document.getElementById('be-url').value||'').trim().replace(/\/$/,'');
+  if (!API) return;
+  localStorage.setItem('cp_api', API);
+  hide('setup'); show('app');
+  loadAccounts();
+}
+
+// ── Fetch helper ──────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  const r = await fetch(API+path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) { const e = new Error(data.error||r.statusText); e.status=r.status; e.data=data; throw e; }
+  return data;
+}
+
+// ── Accounts ──────────────────────────────────────────────────────────────────
+async function loadAccounts() {
+  try {
+    const accs = await api('/api/accounts');
+    const bar  = document.getElementById('acc-bar');
+    const add  = bar.querySelector('.acc-add');
+    bar.innerHTML = '';
+    bar.appendChild(add);
+    accs.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'acc-icon';
+      el.style.background = color(a.id);
+      el.title = a.name || a.username || a.phone;
+      el.innerHTML = initials(a.name||a.username||a.phone) + '<div class="dot"></div>';
+      el.onclick = () => selectAcc(a);
+      bar.insertBefore(el, add);
+    });
+    if (accs.length) selectAcc(accs[0]);
+  } catch(e) { toast('Нет связи с бэкендом. Запусти server.py', 'err'); }
+}
+
+function selectAcc(acc) {
+  curAcc = acc; curChat = null; lastId = 0; stopPoll();
+  document.querySelectorAll('.acc-icon').forEach(el => el.classList.toggle('active', el.title===(acc.name||acc.username||acc.phone)));
+  setMain('<div class="center"><div class="spin"></div></div>');
+  loadDialogs(acc.id);
+}
+
+// ── Dialogs ───────────────────────────────────────────────────────────────────
+async function loadDialogs(accId) {
+  const el = document.getElementById('chats');
+  el.innerHTML = '<div class="center" style="padding:30px 0"><div class="spin"></div></div>';
+  try {
+    allDialogs = await api(`/api/accounts/${accId}/dialogs`);
+    renderDialogs(allDialogs);
+  } catch(e) { el.innerHTML = `<div class="center" style="padding:20px"><p>Ошибка: ${esc(e.message)}</p></div>`; }
+}
+
+function renderDialogs(list) {
+  const el = document.getElementById('chats');
+  if (!list.length) { el.innerHTML = '<div class="center" style="padding:20px"><p>Нет чатов</p></div>'; return; }
+  el.innerHTML = list.map(d => `
+    <div class="chat-item" data-id="${d.id}" onclick="selectChat('${d.id}',${JSON.stringify(d.name).replace(/"/g,'&quot;')},'${d.type}')">
+      <div class="c-avatar" style="background:${color(d.id)}">${initials(d.name)}</div>
+      <div class="c-info">
+        <div class="c-name">${esc(d.name)}</div>
+        <div class="c-prev">${esc(d.last_message)}</div>
+      </div>
+      <div class="c-meta">
+        <div class="c-time">${d.date?fmtDate(d.date):''}</div>
+        ${d.unread>0?`<div class="c-badge">${d.unread>99?'99+':d.unread}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function filterChats(q) {
+  renderDialogs(q ? allDialogs.filter(d=>d.name.toLowerCase().includes(q.toLowerCase())) : allDialogs);
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+async function selectChat(chatId, name, type) {
+  if (!curAcc) return;
+  stopPoll(); curChat=chatId; lastId=0;
+  document.querySelectorAll('.chat-item').forEach(el=>el.classList.toggle('active',el.dataset.id===chatId));
+  const badge = document.querySelector(`.chat-item[data-id="${chatId}"] .c-badge`);
+  if (badge) badge.remove();
+  const c = color(chatId);
+  const typeLabel = {user:'Личка',group:'Группа',channel:'Канал'}[type]||type;
+  setMain(`
+    <div class="chat-head">
+      <div class="ch-avatar" style="background:${c}">${initials(name)}</div>
+      <div class="ch-info"><h3>${esc(name)}</h3><p>${typeLabel}</p></div>
+    </div>
+    <div class="msgs" id="msgs"><div class="center"><div class="spin"></div></div></div>
+    <div class="input-wrap">
+      <textarea class="msg-inp" id="inp" placeholder="Сообщение..." rows="1"
+        onkeydown="onKey(event)" oninput="resize(this)"></textarea>
+      <button class="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>`);
+  await loadMsgs();
+  startPoll();
+  document.getElementById('inp')?.focus();
+}
+
+async function loadMsgs() {
+  try {
+    const msgs = await api(`/api/accounts/${curAcc.id}/messages/${curChat}`);
+    renderMsgs(msgs);
+    if (msgs.length) lastId = Math.max(...msgs.map(m=>m.id));
+    scrollEnd();
+  } catch(e) {
+    const el = document.getElementById('msgs');
+    if (el) el.innerHTML = `<div class="center"><p>Ошибка: ${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderMsgs(msgs) {
+  const el = document.getElementById('msgs');
+  if (!el) return;
+  if (!msgs.length) { el.innerHTML = '<div class="center"><p>Нет сообщений</p></div>'; return; }
+  let html='', lastDate='';
+  msgs.forEach(m => {
+    const d = new Date(m.date).toLocaleDateString([],{month:'long',day:'numeric'});
+    if (d!==lastDate) { html+=`<div class="date-sep"><span>${d}</span></div>`; lastDate=d; }
+    html += buildBubble(m);
+  });
+  el.innerHTML = html;
+}
+
+function buildBubble(m) {
+  const dir = m.out?'out':'in';
+  return `<div class="msg ${dir}" data-id="${m.id}">
+    ${!m.out && m.sender_name ? `<div class="msg-sender">${esc(m.sender_name)}</div>` : ''}
+    <div class="bubble">${m.has_media?'<span class="media-hint">📎 Медиафайл</span>':esc(m.text)||'<span class="media-hint">…</span>'}</div>
+    <div class="msg-time">${fmtTime(m.date)}</div>
+  </div>`;
+}
+
+function appendBubble(m) {
+  const el = document.getElementById('msgs');
+  if (!el) return;
+  const atBot = el.scrollHeight-el.scrollTop-el.clientHeight < 100;
+  el.insertAdjacentHTML('beforeend', buildBubble(m));
+  if (atBot) scrollEnd();
+}
+
+// ── Send ──────────────────────────────────────────────────────────────────────
+async function sendMsg() {
+  const inp = document.getElementById('inp');
+  const text = inp?.value.trim();
+  if (!text||!curChat||!curAcc) return;
+  inp.value=''; inp.style.height='';
+  try {
+    const r = await api(`/api/accounts/${curAcc.id}/send/${curChat}`,
+      {method:'POST', body:JSON.stringify({text})});
+    appendBubble({id:r.id||Date.now(), text, date:new Date().toISOString(), out:true, sender_name:''});
+    if (r.id>lastId) lastId=r.id;
+  } catch(e) { toast('Ошибка: '+e.message,'err'); }
+}
+
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} }
+function resize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+
+// ── Poll ──────────────────────────────────────────────────────────────────────
+function startPoll() {
+  pollTmr = setInterval(async()=>{
+    if (!curAcc||!curChat) return;
+    try {
+      const msgs = await api(`/api/accounts/${curAcc.id}/poll/${curChat}?since=${lastId}`);
+      msgs.forEach(m=>{ if(!m.out) appendBubble(m); if(m.id>lastId) lastId=m.id; });
+    } catch {}
+  }, 2500);
+}
+function stopPoll() { if(pollTmr){clearInterval(pollTmr);pollTmr=null;} }
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function openAuth() {
+  ['s1','s2','s3'].forEach((id,i)=>document.getElementById(id).style.display=i?'none':'');
+  document.getElementById('auth-title').textContent='Добавить аккаунт';
+  show('auth-modal');
+}
+
+async function authStart() {
+  const phone=v('a-phone'), api_id=v('a-id'), api_hash=v('a-hash');
+  if(!phone||!api_id||!api_hash){toast('Заполни все поля','err');return;}
+  try {
+    await api('/api/auth/start',{method:'POST',body:JSON.stringify({phone,api_id,api_hash})});
+    step('s2'); document.getElementById('auth-title').textContent='Код из Telegram';
+  } catch(e){toast('Ошибка: '+e.message,'err');}
+}
+
+async function authVerify() {
+  const phone=v('a-phone'), code=v('a-code');
+  try {
+    await api('/api/auth/verify',{method:'POST',body:JSON.stringify({phone,code})});
+    hide('auth-modal'); toast('Аккаунт добавлен','ok'); loadAccounts();
+  } catch(e){
+    if(e.status===401||e.data?.need_password){step('s3');document.getElementById('auth-title').textContent='Двухфакторка';}
+    else toast('Ошибка: '+e.message,'err');
+  }
+}
+
+async function auth2fa() {
+  const phone=v('a-phone'), code=v('a-code'), password=v('a-pw');
+  try {
+    await api('/api/auth/verify',{method:'POST',body:JSON.stringify({phone,code,password})});
+    hide('auth-modal'); toast('Аккаунт добавлен','ok'); loadAccounts();
+  } catch(e){toast('Ошибка: '+e.message,'err');}
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function show(id){document.getElementById(id).style.display='flex'}
+function hide(id){document.getElementById(id).style.display='none'}
+function step(id){['s1','s2','s3'].forEach(s=>document.getElementById(s).style.display=s===id?'':'none')}
+function setMain(html){document.getElementById('main').innerHTML=html}
+function scrollEnd(){const e=document.getElementById('msgs');if(e)e.scrollTop=e.scrollHeight}
+function v(id){return document.getElementById(id)?.value.trim()||''}
+function overlayClick(e,id){if(e.target===e.currentTarget)hide(id)}
+
+function toast(msg, type='') {
+  const el=document.createElement('div');
+  el.className='toast '+(type==='err'?'err':type==='ok'?'ok':'');
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+</script>
+</body>
+</html>
